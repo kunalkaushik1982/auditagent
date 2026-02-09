@@ -1,0 +1,1 @@
+Does the architecture document include a high-level system diagram?
