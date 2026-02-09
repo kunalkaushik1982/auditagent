@@ -1,0 +1,405 @@
+# System Architecture Document: AI Audit Agent Platform
+
+## Document Information
+- **Project**: AI-Powered Delivery Audit Agent
+- **Version**: 1.0
+- **Date**: February 2026
+- **Author**: Architecture Team
+- **Status**: Approved
+
+---
+
+## 1. Executive Summary
+
+This document describes the technical architecture for an AI-powered audit system designed to review delivery artifacts. The system employs a microservices-inspired architecture with a FastAPI backend, modern web frontend, and AI processing engine.
+
+**Key Characteristics**:
+- Multi-agent AI architecture
+- Asynchronous task processing
+- Horizontal scalability
+- Secure authentication
+- Cloud-native design
+
+---
+
+## 2. High-Level Architecture
+
+### 2.1 System Overview
+
+```
+┌─────────────┐
+│   Browser   │
+│  (Client)   │
+└──────┬──────┘
+       │ HTTPS
+       ▼
+┌─────────────────────────────────────┐
+│      Load Balancer (NGINX)          │
+└──────────────┬──────────────────────┘
+               │
+        ┌──────┴──────┐
+        ▼             ▼
+┌─────────────┐  ┌─────────────┐
+│  FastAPI    │  │  FastAPI    │
+│  Instance 1 │  │  Instance 2 │
+└──────┬──────┘  └──────┬──────┘
+       │                │
+       └────────┬───────┘
+                ▼
+┌─────────────────────────────────────┐
+│        PostgreSQL Database           │
+└─────────────────────────────────────┘
+                │
+                ▼
+┌─────────────────────────────────────┐
+│       Redis (Task Queue)             │
+└──────────────┬──────────────────────┘
+               │
+        ┌──────┴──────┐
+        ▼             ▼
+┌─────────────┐  ┌─────────────┐
+│   Celery    │  │   Celery    │
+│   Worker 1  │  │   Worker 2  │
+└──────┬──────┘  └──────┬──────┘
+       │                │
+       └────────┬───────┘
+                ▼
+┌─────────────────────────────────────┐
+│       OpenAI API (GPT-4)             │
+└─────────────────────────────────────┘
+```
+
+### 2.2 Component Breakdown
+
+**Presentation Layer**:
+- Static HTML/CSS/JavaScript frontend
+- Responsive design for desktop/tablet
+- Real-time progress updates via polling
+
+**Application Layer**:
+- FastAPI REST API
+- JWT-based authentication
+- Request validation and routing
+
+**Business Logic Layer**:
+- Agent orchestration
+- Document processing
+- AI validation engine
+
+**Data Layer**:
+- PostgreSQL for persistent storage
+- Redis for caching and task queue
+- File system for document storage
+
+**External Services**:
+- OpenAI GPT-4 API for AI processing
+
+---
+
+## 3. Technology Stack
+
+### 3.1 Backend Stack
+- **Framework**: FastAPI 0.109.0
+- **Language**: Python 3.11
+- **ORM**: SQLAlchemy 2.0
+- **Task Queue**: Celery 5.3 + Redis 7.0
+- **AI Framework**: LangChain 0.1.0
+- **Authentication**: python-jose (JWT)
+- **Document Processing**: PyPDF2, python-docx, docx2txt
+
+### 3.2 Frontend Stack
+- **Core**: HTML5, CSS3, JavaScript (ES6+)
+- **Styling**: Custom CSS with CSS variables
+- **No framework**: Vanilla JS for performance
+
+### 3.3 Infrastructure
+- **Database**: PostgreSQL 15 (production), SQLite (development)
+- **Cache**: Redis 7.0
+- **Web Server**: Uvicorn (development), Gunicorn + Uvicorn workers (production)
+- **Reverse Proxy**: NGINX
+- **Containerization**: Docker + Docker Compose
+- **Cloud**: AWS (primary) / Azure (alternative)
+
+### 3.4 External APIs
+- **OpenAI API**: GPT-4 for document analysis
+- **Model**: gpt-4o-mini for cost optimization
+
+---
+
+## 4. Security Architecture
+
+### 4.1 Authentication & Authorization
+- **JWT Tokens**: HS256 algorithm, 30-minute expiration
+- **Password Hashing**: bcrypt with salt
+- **Session Management**: Server-side validation
+- **RBAC**: Role-based access control (future)
+
+### 4.2 Data Security
+- **Encryption in Transit**: TLS 1.3 (HTTPS)
+- **Encryption at Rest**: Database-level encryption
+- **File Storage**: Secured upload directory with restricted access
+- **API Keys**: Stored in environment variables, never in code
+
+### 4.3 API Security
+- **CORS**: Configured for specific origins
+- **Rate Limiting**: 100 requests/minute per user
+- **Input Validation**: Pydantic models for all inputs
+- **SQL Injection Protection**: Parameterized queries via SQLAlchemy
+
+### 4.4 Security Monitoring
+- Logging of all authentication attempts
+- Failed login tracking
+- Audit trail for document access
+
+---
+
+## 5. Scalability Design
+
+### 5.1 Horizontal Scaling
+
+**Web Tier**:
+- Stateless FastAPI instances
+- Load balanced with NGINX
+- Can scale to N instances based on demand
+
+**Worker Tier**:
+- Celery workers with thread pool
+- 4 concurrent threads per worker
+- Auto-scaling based on queue depth
+
+**Database Tier**:
+- PostgreSQL read replicas
+- Connection pooling (SQLAlchemy)
+- Query optimization with indexes
+
+### 5.2 Performance Optimization
+
+**Caching Strategy**:
+- Redis cache for user sessions
+- Document metadata caching
+- API response caching (future)
+
+**Async Processing**:
+- All document processing is asynchronous
+- Non-blocking I/O with asyncio
+- Background tasks via Celery
+
+**Database Optimization**:
+- Indexed columns: user_id, session_id, agent_type
+- Batch operations where possible
+- Lazy loading for relationships
+
+---
+
+## 6. Data Models
+
+### 6.1 Core Entities
+
+**User**:
+```
+- id (UUID, PK)
+- username (String, unique)
+- email (String, unique)
+- hashed_password (String)
+- created_at (DateTime)
+- is_active (Boolean)
+```
+
+**AuditSession**:
+```
+- id (Integer, PK)
+- session_id (String, unique)
+- user_id (UUID, FK -> User)
+- agent_type (String)
+- artifact_path (String)
+- checklist_path (String)
+- status (Enum: pending, processing, completed, failed)
+- progress_percentage (Float)
+- started_at, completed_at (DateTime)
+```
+
+**AuditResult**:
+```
+- id (UUID, PK)
+- session_id (String, FK -> AuditSession)
+- compliance_score (Float)
+- total_items (Integer)
+- compliant_count, non_compliant_count (Integer)
+- report_markdown (Text)
+```
+
+**AuditFinding**:
+```
+- id (UUID, PK)
+- result_id (UUID, FK -> AuditResult)
+- checklist_item (String)
+- finding_type (Enum: compliant, non_compliant, missing)
+- severity (Enum: critical, high, medium, low)
+- description, recommendation (Text)
+```
+
+### 6.2 Database Schema Design
+
+- **Normalization**: 3NF for relational integrity
+- **Foreign Keys**: Enforce referential integrity
+- **Cascade Deletes**: Configured for cleanup
+- **Indexes**: On frequently queried fields
+
+---
+
+## 7. API Design
+
+### 7.1 RESTful Principles
+- Resource-based URLs
+- HTTP verbs (GET, POST, PUT, DELETE)
+- JSON request/response format
+- Stateless operations
+
+### 7.2 Key Endpoints
+
+**Authentication**:
+```
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/logout
+```
+
+**Audits**:
+```
+POST /api/audits/submit
+GET  /api/audits/status/{session_id}
+GET  /api/audits/result/{session_id}
+GET  /api/audits/my-audits
+```
+
+### 7.3 API Versioning
+- URL-based versioning: `/api/v1/...`
+- Backwards compatibility maintained
+
+---
+
+## 8. Deployment Architecture
+
+### 8.1 Development Environment
+- Docker Compose for local development
+- SQLite database
+- Memurai (Redis for Windows)
+- Hot reload enabled
+
+### 8.2 Production Environment
+
+**Infrastructure**:
+- AWS EC2 instances (or ECS containers)
+- RDS for PostgreSQL
+- ElastiCache for Redis
+- S3 for document storage (future)
+- CloudWatch for monitoring
+
+**Deployment Strategy**:
+- Blue-Green deployments
+- Zero-downtime updates
+- Health checks before routing traffic
+
+**CI/CD**:
+- GitHub Actions for automation
+- Automated testing on PR
+- Deploy to staging → manual approval → production
+
+---
+
+## 9. Monitoring & Logging
+
+### 9.1 Application Monitoring
+- Health check endpoints
+- Prometheus metrics (future)
+- Response time tracking
+- Error rate monitoring
+
+### 9.2 Logging Strategy
+- Structured logging (JSON format)
+- Log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+- Centralized logging (CloudWatch / ELK stack)
+- Log rotation and retention (30 days)
+
+### 9.3 Alerts
+- High error rates
+- Long processing times
+- API failures
+- Database connection issues
+
+---
+
+## 10. Disaster Recovery
+
+### 10.1 Backup Strategy
+- **Database**: Daily automated backups with 7-day retention
+- **Documents**: Replicated to S3
+- **Configuration**: Version controlled in Git
+
+### 10.2 Recovery Procedures
+- RTO (Recovery Time Objective): 4 hours
+- RPO (Recovery Point Objective): 24 hours
+- Automated database restore scripts
+- Documented runbooks
+
+---
+
+## 11. Future Enhancements
+
+### Phase 2 Roadmap
+- Microservices decomposition
+- GraphQL API option
+- Real-time notifications (WebSocket)
+- Advanced caching with CDN
+- Machine learning model fine-tuning
+
+### Scalability Targets
+- Support 1000+ concurrent users
+- Process 10,000 documents/day
+- Sub-second API response times
+- 99.9% uptime SLA
+
+---
+
+## 12. Compliance & Standards
+
+### Industry Standards
+- **REST API**: OpenAPI 3.0 specification
+- **Security**: OWASP Top 10 compliance
+- **Data Privacy**: GDPR considerations
+- **Accessibility**: WCAG 2.1 (AA level)
+
+### Best Practices
+- Clean architecture principles
+- SOLID design principles
+- 12-Factor App methodology
+- Infrastructure as Code
+
+---
+
+## Appendix A: Design Decisions
+
+**Why FastAPI?**
+- Async support for high performance
+- Automatic API documentation
+- Type safety with Pydantic
+- Modern Python features
+
+**Why Celery?**
+- Robust task queue system
+- Distributed worker support
+- Retry and error handling
+- Production-proven at scale
+
+**Why PostgreSQL?**
+- ACID compliance
+- JSON support for flexible data
+- Excellent performance
+- Rich ecosystem
+
+---
+
+**Document Approval**:
+- Architecture Review Board: Approved
+- Security Team: Approved
+- Development Team: Approved
