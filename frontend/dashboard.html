@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Agent - Dashboard</title>
+    <link rel="stylesheet" href="styles/styles.css">
+    <style>
+        /* Dashboard Layout */
+        .dashboard-container {
+            min-height: 100vh;
+            padding: var(--space-lg);
+        }
+
+        /* Header */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-xl);
+            padding-bottom: var(--space-lg);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        .logout-btn {
+            padding: 0.625rem 1.25rem;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-xl);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: var(--space-md) var(--space-lg);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Submit Audit Tab */
+        .upload-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--space-lg);
+            margin-top: var(--space-lg);
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-md);
+            padding: var(--space-xl);
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--border-focus);
+            background: var(--surface);
+        }
+
+        .upload-zone.has-file {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: var(--space-md);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* Results Table */
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--space-md);
+        }
+
+        .results-table th {
+            text-align: left;
+            padding: var(--space-md);
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+        }
+
+        .results-table td {
+            padding: var(--space-md);
+            border-top: 1px solid var(--border);
+        }
+
+        .results-table tr:hover {
+            background: var(--surface);
+        }
+
+        /* Stats Grid */
+        .stats-card {
+            background: var(--surface);
+            padding: var(--space-lg);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-bottom: var(--space-xs);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .compliance-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0 auto var(--space-md);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div>
+                <h1>🔍 Audit Agent</h1>
+                <p class="text-muted">AI-Powered Document Analysis</p>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar"></div>
+                <div>
+                    <div id="username"></div>
+                    <button class="btn btn-secondary logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="submit">Submit Audit</button>
+            <button class="tab" data-tab="audits">My Audits</button>
+            <button class="tab" data-tab="results">View Results</button>
+        </div>
+
+        <!-- Submit Audit Tab -->
+        <div id="submit-tab" class="tab-content active">
+            <div class="card">
+                <h2>Submit New Audit</h2>
+                <p class="text-muted mb-lg">Upload your document and checklist to start an AI-powered audit</p>
+
+                <form id="auditForm">
+                    <div class="form-group">
+                        <label class="form-label">Agent Type</label>
+                        <select id="agentType" class="form-select" required>
+                            <option value="">-- Select Agent --</option>
+                            <option value="sow_reviewer">SoW Reviewer</option>
+                            <option value="project_plan_reviewer">Project Plan Reviewer (Coming Soon)</option>
+                            <option value="architecture_compliance">Architecture Compliance (Coming Soon)</option>
+                        </select>
+                    </div>
+
+                    <div class="upload-section">
+                        <div class="upload-zone" id="artifactZone">
+                            <div class="upload-icon">📄</div>
+                            <h3>Artifact Document</h3>
+                            <p class="text-muted">Click to upload .txt or .docx</p>
+                            <input type="file" id="artifactFile" class="file-input" accept=".txt,.docx" required>
+                        </div>
+
+                        <div class="upload-zone" id="checklistZone">
+                            <div class="upload-icon">✅</div>
+                            <h3>Checklist</h3>
+                            <p class="text-muted">Click to upload .txt or .docx</p>
+                            <input type="file" id="checklistFile" class="file-input" accept=".txt,.docx" required>
+                        </div>
+                    </div>
+
+                    <div class="mt-md">
+                        <button type="submit" class="btn btn-primary">
+                            🚀 Start Audit
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- My Audits Tab -->
+        <div id="audits-tab" class="tab-content">
+            <div class="card">
+                <h2>My Audits</h2>
+                <div id="auditsList"></div>
+            </div>
+        </div>
+
+        <!-- View Results Tab -->
+        <div id="results-tab" class="tab-content">
+            <div class="card">
+                <h2>Audit Results</h2>
+                <div id="resultsContent">
+                    <p class="text-muted">Select an audit from "My Audits" to view results</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

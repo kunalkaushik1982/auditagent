@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Agent - Login</title>
+    <link rel="stylesheet" href="styles/styles.css">
+    <style>
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-md);
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: var(--space-xl);
+        }
+
+        .login-title {
+            font-size: 2.5rem;
+            margin-bottom: var(--space-sm);
+        }
+
+        .login-subtitle {
+            color: var(--text-muted);
+            font-size: 1.125rem;
+        }
+
+        .login-form {
+            margin-top: var(--space-lg);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .demo-credentials {
+            margin-top: var(--space-lg);
+            padding: var(--space-md);
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+        }
+
+        .demo-credentials strong {
+            color: var(--info);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card card">
+            <div class="login-header">
+                <h1 class="login-title">🔍 Audit Agent</h1>
+                <p class="login-subtitle">AI-Powered Document Analysis</p>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <form class="login-form" id="loginForm">
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        class="form-input" 
+                        placeholder="Enter username"
+                        required
+                        autocomplete="username"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        class="form-input" 
+                        placeholder="Enter password"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+
+                <button type="submit" class="btn btn-primary submit-btn">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="demo-credentials">
+                <strong>Demo Credentials:</strong><br>
+                Username: <code>admin</code><br>
+                Password: <code>admin123</code>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        // Check if already logged in
+        if (localStorage.getItem('token')) {
+            window.location.href = 'dashboard.html';
+        }
+
+        const loginForm = document.getElementById('loginForm');
+        const alertContainer = document.getElementById('alert-container');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = loginForm.querySelector('button[type="submit"]');
+
+            // Clear previous alerts
+            alertContainer.innerHTML = '';
+
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Signing in...';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Store token
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('username', username);
+
+                    // Show success message
+                    showAlert('Login successful! Redirecting...', 'success');
+
+                    // Redirect to dashboard
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 500);
+                } else {
+                    showAlert(data.detail || 'Invalid credentials', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign In';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showAlert('Network error. Please ensure the server is running.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign In';
+            }
+        });
+
+        function showAlert(message, type) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+            alertContainer.innerHTML = `
+                <div class="alert ${alertClass}">
+                    ${message}
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

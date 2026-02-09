@@ -1,0 +1,11 @@
+Statement of Work - Test Sample
+
+Project Title: Customer Portal Development Project
+
+Project Description:
+Development of a web-based customer portal to enable self-service account management and support ticket submission.
+
+Project Objectives:
+- Create user-friendly web interface
+- Enable customer self-service capabilities
+- Reduce support team workload by 30%

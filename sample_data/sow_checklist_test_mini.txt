@@ -1,0 +1,4 @@
+Statement of Work (SoW) Checklist - MINIMAL TEST VERSION
+
+Project Information:
+1. Does the SoW include a clear project title and description?
