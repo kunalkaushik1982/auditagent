@@ -138,13 +138,16 @@ class BaseAuditAgent(ABC):
         Load and parse checklist from a file.
         
         Args:
-            file_path: Path to checklist file (.txt or .docx)
+            file_path: Path to checklist file (.pdf, .txt, or .docx)
             
         Returns:
             List of checklist items
         """
         try:
-            if file_path.endswith('.docx'):
+            if file_path.endswith('.pdf'):
+                # Extract text from PDF
+                content = self._extract_text_from_pdf(file_path)
+            elif file_path.endswith('.docx'):
                 # Use docx2txt directly (Windows-compatible)
                 content = docx2txt.process(file_path)
             else:
