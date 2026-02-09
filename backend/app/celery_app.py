@@ -29,16 +29,5 @@ celery_app.conf.update(
 )
 
 
-# Optional: Configure task routes (for multiple queues)
-# Commented out to use default "celery" queue for now
-# celery_app.conf.task_routes = {
-#     "backend.app.tasks.process_audit_task": {"queue": "audits"},
-#     "backend.app.tasks_mock.process_audit_task_mock": {"queue": "audits"},
-# }
-
-# Import tasks to register them with Celery (avoid circular import)
-try:
-    from backend.app.tasks_mock import process_audit_task_mock  # noqa: F401
-    from backend.app.tasks import process_audit_task  # noqa: F401
-except ImportError as e:
-    print(f"Warning: Could not import tasks: {e}")
+# Configure task autodiscovery
+celery_app.autodiscover_tasks(['backend.app'], force=True)
