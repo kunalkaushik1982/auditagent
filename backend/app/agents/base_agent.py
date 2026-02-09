@@ -14,6 +14,7 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain_core.pydantic_v1 import BaseModel, Field
 from backend.app.core.config import settings
 import docx2txt
+import PyPDF2
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -63,16 +64,19 @@ class BaseAuditAgent(ABC):
     
     async def load_document(self, file_path: str) -> Document:
         """
-        Load a document (Word or text file).
+        Load a document (PDF, Word, or text file).
         
         Args:
-            file_path: Path to the file (.docx or .txt)
+            file_path: Path to the file (.pdf, .docx, or .txt)
             
         Returns:
             LangChain Document object
         """
         try:
-            if file_path.endswith('.docx'):
+            if file_path.endswith('.pdf'):
+                # Extract text from PDF
+                text = self._extract_text_from_pdf(file_path)
+            elif file_path.endswith('.docx'):
                 # Use docx2txt for Word documents (Windows-compatible)
                 text = docx2txt.process(file_path)
             else:
@@ -80,7 +84,7 @@ class BaseAuditAgent(ABC):
                 with open(file_path, 'r', encoding='utf-8') as f:
                     text = f.read()
             
-            if not text:
+            if not text or not text.strip():
                 raise ValueError(f"No content loaded from {file_path}")
             
             # Create LangChain Document object
@@ -92,6 +96,42 @@ class BaseAuditAgent(ABC):
         except Exception as e:
             logger.error(f"Error loading document {file_path}: {e}")
             raise
+    
+    def _extract_text_from_pdf(self, file_path: str) -> str:
+        """
+        Extract text from PDF file using PyPDF2.
+        
+        Args:
+            file_path: Path to PDF file
+            
+        Returns:
+            Extracted text content
+        """
+        try:
+            text = ""
+            with open(file_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                num_pages = len(reader.pages)
+                
+                logger.info(f"Extracting text from PDF: {num_pages} pages")
+                
+                for page_num, page in enumerate(reader.pages, 1):
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n\n"
+                    
+                    if page_num % 10 == 0:
+                        logger.info(f"Processed {page_num}/{num_pages} pages")
+            
+            if not text.strip():
+                raise ValueError("No text could be extracted from PDF")
+            
+            logger.info(f"Successfully extracted {len(text)} characters from PDF")
+            return text
+            
+        except Exception as e:
+            logger.error(f"Error extracting text from PDF {file_path}: {e}")
+            raise ValueError(f"Failed to extract text from PDF: {str(e)}")
     
     async def load_checklist(self, file_path: str) -> List[str]:
         """
