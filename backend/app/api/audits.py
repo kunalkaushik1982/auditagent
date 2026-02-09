@@ -81,17 +81,9 @@ async def submit_audit(
         db.refresh(audit_session)
         
         # Queue the audit processing task with Celery
-        # Switch between MOCK (testing) and REAL (production) tasks:
-        USE_MOCK = os.getenv("USE_MOCK_TASK", "false").lower() == "true"
-        
-        if USE_MOCK:
-            from backend.app.tasks_mock import process_audit_task_mock
-            task = process_audit_task_mock.delay(session_id_str)
-            logger.info(f"🧪 [MOCK] Audit {session_id_str} queued with task ID: {task.id}")
-        else:
-            from backend.app.tasks import process_audit_task
-            task = process_audit_task.delay(session_id_str)
-            logger.info(f"🚀 [REAL] Audit {session_id_str} queued with task ID: {task.id}")
+        from backend.app.tasks import process_audit_task
+        task = process_audit_task.delay(session_id_str)
+        logger.info(f"🚀 Audit {session_id_str} queued with task ID: {task.id}")
         
         return {
             "session_id": session_id_str,
