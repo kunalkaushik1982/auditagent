@@ -197,8 +197,9 @@ class BaseAuditAgent(ABC):
         parser = PydanticOutputParser(pydantic_object=AuditFinding)
         
         # Create prompt template
+        # Create prompt template
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert document auditor. Your task is to validate whether a document meets a specific requirement from a checklist.
+            ("system", """You are an expert {agent_name}. Your task is to validate whether a document meets a specific requirement from a checklist.
 
 Analyze the document carefully and determine:
 1. Is the requirement met? (compliant, non_compliant, missing, or advisory)
@@ -221,6 +222,7 @@ Please analyze and provide your audit finding.""")
         
         # Format the prompt
         formatted_prompt = prompt.format_messages(
+            agent_name=self.agent_name,
             document=artifact_content[:8000],  # Limit to avoid token limits
             requirement=checklist_item,
             format_instructions=parser.get_format_instructions()
