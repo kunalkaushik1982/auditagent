@@ -9,7 +9,7 @@ from typing import Optional
 from .base_agent import BaseAuditAgent
 from .sow_reviewer import SoWReviewerAgent
 from .project_plan_reviewer import ProjectPlanReviewerAgent
-from .architecture_compliance_agent import ArchitectureComplianceAgent
+from .architecture_compliance import ArchitectureComplianceAgent
 
 
 class AgentFactory:

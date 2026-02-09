@@ -156,14 +156,22 @@ class BaseAuditAgent(ABC):
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
             
+            logger.info(f"Raw content length from {file_path}: {len(content)}")
+            logger.debug(f"Raw content preview: {content[:200]}")
+            
             # Split by lines and filter empty lines
+            lines = content.split('\n')
+            logger.info(f"Split into {len(lines)} lines")
+            
             checklist_items = [
                 line.strip() 
-                for line in content.split('\n') 
+                for line in lines
                 if line.strip() and not line.strip().startswith('#')
             ]
             
             logger.info(f"Loaded {len(checklist_items)} checklist items from {file_path}")
+            if len(checklist_items) == 0:
+                logger.warning(f"⚠️ No checklist items found! Check file encoding or formatting.")
             return checklist_items
             
         except Exception as e:
@@ -253,6 +261,9 @@ Please analyze and provide your audit finding.""")
             artifact_doc = await self.load_document(artifact_path)
             checklist_items = await self.load_checklist(checklist_path)
             
+            if not checklist_items:
+                raise ValueError(f"Checklist is empty or could not be parsed: {checklist_path}. Please check file content and encoding.")
+            
             logger.info(f"Processing {len(checklist_items)} checklist items...")
             
             # Step 2: Validate each checklist item
@@ -265,7 +276,13 @@ Please analyze and provide your audit finding.""")
                     checklist_item=item
                 )
                 
-                findings.append(finding.dict())
+                finding_dict = finding.dict()
+                # Normalize finding type to lowercase to ensure report generation works
+                if finding_dict.get('finding_type'):
+                    finding_dict['finding_type'] = finding_dict['finding_type'].lower()
+                    
+                logger.info(f"Finding for item {idx}: {finding_dict.get('finding_type')}")
+                findings.append(finding_dict)
             
             # Step 3: Generate summary statistics
             stats = self._calculate_statistics(findings)
