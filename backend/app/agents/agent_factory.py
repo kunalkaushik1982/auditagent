@@ -8,9 +8,8 @@ Factory pattern for instantiating the correct agent based on type.
 from typing import Optional
 from .base_agent import BaseAuditAgent
 from .sow_reviewer import SoWReviewerAgent
-# TODO: Implement other agents
-# from .project_plan_reviewer import ProjectPlanReviewerAgent
-# from .architecture_compliance import ArchitectureComplianceAgent
+from .project_plan_reviewer import ProjectPlanReviewerAgent
+from .architecture_compliance_agent import ArchitectureComplianceAgent
 
 
 class AgentFactory:
@@ -19,9 +18,8 @@ class AgentFactory:
     # Registry of available agents
     _agents = {
         "sow_reviewer": SoWReviewerAgent,
-        # TODO: Add when implemented
-        # "project_plan_reviewer": ProjectPlanReviewerAgent,
-        # "architecture_compliance": ArchitectureComplianceAgent
+        "project_plan_reviewer": ProjectPlanReviewerAgent,
+        "architecture_compliance": ArchitectureComplianceAgent
     }
     
     @classmethod

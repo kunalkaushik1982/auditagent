@@ -1,0 +1,13 @@
+# Test Document for PDF Conversion
+
+## Project Scope
+
+This project aims to develop an AI-powered audit system for reviewing documentation.
+
+The scope includes:
+- Document processing (PDF, Word, text)
+- AI validation using OpenAI GPT
+- Parallel processing capabilities
+- User authentication and session management
+
+This is a complete project scope definition.
