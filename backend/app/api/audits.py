@@ -6,6 +6,7 @@ Handles audit submission, status tracking, and result retrieval.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
@@ -172,10 +173,12 @@ async def get_audit_results(
     
     return AuditResultResponse(
         result_id=audit_session.result.result_id,
-        session_id=audit_session.id,
+        session_id=audit_session.session_id,
+        audit_number=audit_session.id,
         summary=audit_session.result.summary,
         validation_score=audit_session.result.validation_score,
         report_content=audit_session.result.report_content,
+        annotated_artifact_path=audit_session.result.annotated_artifact_path,
         findings=findings_response,
         created_at=audit_session.result.created_at
     )
@@ -196,6 +199,7 @@ async def get_my_audits(
         "audits": [
             {
                 "session_id": s.session_id,
+                "audit_number": s.id,
                 "agent_type": s.agent_type,
                 "status": s.status,
                 "progress_percentage": s.progress_percentage,  # Fixed: was "progress"
@@ -210,3 +214,42 @@ async def get_my_audits(
             for s in sessions
         ]
     }
+
+
+@router.get("/results/{session_id}/download-annotated")
+async def download_annotated_report(
+    session_id: str,
+    db: Session = Depends(get_db)
+):
+    """Download the annotated Word document"""
+    
+    audit_session = db.query(AuditSession).filter(
+        AuditSession.session_id == session_id
+    ).first()
+    
+    if not audit_session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Audit session not found"
+        )
+        
+    if not audit_session.result or not audit_session.result.annotated_artifact_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No annotated report available"
+        )
+        
+    file_path = audit_session.result.annotated_artifact_path
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Annotated file missing from server"
+        )
+        
+    filename = os.path.basename(file_path)
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )

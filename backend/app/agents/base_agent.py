@@ -9,6 +9,10 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 from langchain.schema import Document
 from langchain_openai import ChatOpenAI
+try:
+    from langchain_community.chat_models import ChatOllama
+except ImportError:
+    pass
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.pydantic_v1 import BaseModel, Field
@@ -29,6 +33,7 @@ class AuditFinding(BaseModel):
     description: str = Field(description="Detailed description of the finding")
     severity: Optional[str] = Field(default=None, description="Severity: critical, high, medium, low")
     location: Optional[str] = Field(default=None, description="Location in document (section, page)")
+    quote: Optional[str] = Field(default=None, description="Exact quote from the document supporting this finding")
     recommendation: Optional[str] = Field(default=None, description="Recommendation to address the finding")
 
 
@@ -52,14 +57,30 @@ class BaseAuditAgent(ABC):
         self.agent_type = agent_type
         
         # Initialize LangChain LLM
-        if not settings.OPENAI_API_KEY:
-            raise ValueError("OPENAI_API_KEY not set in environment")
-            
-        self.llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0,
-            openai_api_key=settings.OPENAI_API_KEY
-        )
+        if settings.LLM_PROVIDER == "ollama":
+            try:
+                logger.info(f"🦙 Using Ollama (model: {settings.OLLAMA_MODEL})")
+                self.llm = ChatOllama(
+                    base_url=settings.OLLAMA_BASE_URL,
+                    model=settings.OLLAMA_MODEL,
+                    temperature=0
+                )
+            except NameError:
+                raise ImportError("langchain-community is required for Ollama. Please run: pip install langchain-community")
+            except Exception as e:
+                logger.error(f"Failed to initialize Ollama: {e}")
+                raise
+        else:
+            # Default to OpenAI
+            if not settings.OPENAI_API_KEY:
+                raise ValueError("OPENAI_API_KEY not set in environment")
+                
+            logger.info("🤖 Using OpenAI (gpt-4o-mini)")
+            self.llm = ChatOpenAI(
+                model="gpt-4o-mini",
+                temperature=0,
+                openai_api_key=settings.OPENAI_API_KEY
+            )
         
         logger.info(f"Initialized {self.agent_name}")
     
@@ -206,7 +227,8 @@ Analyze the document carefully and determine:
 2. Where in the document is the relevant information? (section, page number if visible)
 3. What is your detailed assessment?
 4. What is the severity if non-compliant? (critical, high, medium, low)
-5. What recommendations do you have?
+5. What is the exact quote from the document that serves as evidence? (If applicable)
+6. What recommendations do you have?
 
 Be thorough, specific, and cite evidence from the document.
 

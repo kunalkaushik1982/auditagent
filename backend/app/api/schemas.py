@@ -77,10 +77,12 @@ class FindingResponse(BaseModel):
 
 class AuditResultResponse(BaseModel):
     result_id: str
-    session_id: int
+    session_id: str
+    audit_number: int
     summary: Optional[str] = None
     validation_score: Optional[float] = None
     report_content: str
+    annotated_artifact_path: Optional[str] = None
     findings: List[FindingResponse] = []
     created_at: datetime
     

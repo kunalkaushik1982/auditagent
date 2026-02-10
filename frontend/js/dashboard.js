@@ -195,7 +195,7 @@ function buildAuditsTable(audits) {
             <tbody id="auditsTableBody">
                 ${audits.map((audit, index) => `
                     <tr data-session-id="${audit.session_id}">
-                        <td><strong>#${audits.length - index}</strong></td>
+                        <td><strong>#${audit.audit_number}</strong></td>
                         <td>${formatAgentType(audit.agent_type)}</td>
                         <td class="status-cell">
                             ${getStatusBadge(audit.status)}
@@ -319,7 +319,14 @@ async function loadResults(sessionId) {
         const resultsHTML = `
             <div class="mb-lg">
                 <h3>Audit Summary</h3>
-                <p class="text-muted mb-md">Session: <code>${sessionId}</code></p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md);">
+                    <p class="text-muted mb-0"><strong>Audit #${data.audit_number}</strong> <span style="font-size: 0.8em; opacity: 0.7">(Session: <code>${sessionId}</code>)</span></p>
+                    ${data.annotated_artifact_path ? 
+                        `<a href="http://localhost:8000/api/audits/results/${sessionId}/download-annotated" target="_blank" class="btn btn-primary" style="text-decoration: none;">
+                            📥 Download Annotated Word Doc
+                        </a>` : ''
+                    }
+                </div>
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md);">
                     <div class="stats-card">

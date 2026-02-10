@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     # OpenAI
     OPENAI_API_KEY: str = ""
     
+    # LLM Provider (openai or ollama)
+    LLM_PROVIDER: str = "openai"
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3"
+    
     # CORS
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000,null"
     

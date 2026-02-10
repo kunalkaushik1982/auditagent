@@ -154,13 +154,33 @@ def process_audit_task(self, session_id: str):
         )
         
         # Store results
+        # Generate annotation if applicable (Word documents)
+        annotated_path = None
+        if audit_session.artifact_path.endswith('.docx'):
+            try:
+                from backend.app.core.annotator import Annotator
+                logger.info(f"🖊️ Generating inline annotations for {audit_session.artifact_path}")
+                
+                # Convert finding objects to dicts for annotator
+                findings_list = result.get("findings", [])
+                
+                annotator = Annotator()
+                annotated_path = annotator.annotate_document(
+                    original_path=audit_session.artifact_path,
+                    findings=findings_list
+                )
+            except Exception as e:
+                logger.error(f"Failed to generate annotations: {e}")
+                # Don't fail the whole audit if annotation fails
+        
         result_id = str(uuid.uuid4())
         audit_result = AuditResult(
             result_id=result_id,
             session_id=audit_session.id,
             summary=result.get("summary", ""),
             validation_score=result.get("compliance_rate", 0.0),
-            report_content=result.get("report", "")
+            report_content=result.get("report", ""),
+            annotated_artifact_path=annotated_path
         )
         db.add(audit_result)
         db.commit()
