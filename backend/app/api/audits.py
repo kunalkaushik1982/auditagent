@@ -248,8 +248,16 @@ async def download_annotated_report(
         )
         
     filename = os.path.basename(file_path)
+    
+    # Determine media type
+    media_type = 'application/octet-stream'
+    if filename.lower().endswith('.docx'):
+        media_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    elif filename.lower().endswith('.pdf'):
+        media_type = 'application/pdf'
+        
     return FileResponse(
         path=file_path,
         filename=filename,
-        media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        media_type=media_type
     )

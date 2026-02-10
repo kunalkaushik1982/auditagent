@@ -12,6 +12,11 @@ from docx import Document
 from docx.enum.text import WD_COLOR_INDEX
 from docx.shared import RGBColor
 
+try:
+    import fitz  # PyMuPDF
+except ImportError:
+    fitz = None
+
 logger = logging.getLogger(__name__)
 
 class Annotator:
@@ -63,6 +68,92 @@ class Annotator:
             
         except Exception as e:
             logger.error(f"Error annotating document: {e}", exc_info=True)
+            raise
+
+    def annotate_pdf(self, original_path: str, findings: List[Dict[str, Any]]) -> str:
+        """
+        Annotate PDF with highlights based on findings.
+        Includes robust search for text matching.
+        """
+        if not fitz:
+            logger.warning("PyMuPDF (fitz) not installed. Skipping PDF annotation.")
+            return original_path
+            
+        if not os.path.exists(original_path):
+            raise FileNotFoundError(f"Document not found: {original_path}")
+            
+        try:
+            doc = fitz.open(original_path)
+            logger.info(f"Opened PDF for annotation: {original_path}")
+            
+            annotated_count = 0
+            
+            for finding in findings:
+                quote = finding.get('quote')
+                severity = (finding.get('severity') or 'low').lower()
+                description = finding.get('description') or 'Issue found'
+                
+                if not quote or len(quote) < 5 or "N/A" in quote:
+                    continue
+                
+                # Normalize quote (remove extra whitespace/newlines)
+                clean_quote = " ".join(quote.split())
+                
+                # Search strategies
+                found_instances = []
+                
+                # 1. Exact Search per page
+                for page in doc:
+                    # Try exact quote first
+                    insts = page.search_for(quote)
+                    
+                    # Try cleaned quote if exact failed
+                    if not insts and clean_quote != quote:
+                        insts = page.search_for(clean_quote)
+                        
+                    # Try first 50 chars if long quote fails (fuzzy-ish)
+                    if not insts and len(clean_quote) > 100:
+                        short_quote = clean_quote[:50]
+                        insts = page.search_for(short_quote)
+                        if insts:
+                            logger.info(f"Matched partial quote: '{short_quote}...'")
+                    
+                    if insts:
+                        found_instances.append((page, insts))
+                
+                if found_instances:
+                    annotated_count += 1
+                    
+                    # Set color
+                    if severity == 'critical':
+                        color = (1, 0, 0) # Red
+                    elif severity == 'high':
+                        color = (1, 0.5, 0) # Orange
+                    elif severity == 'medium':
+                        color = (1, 1, 0) # Yellow
+                    else:
+                        color = (0, 1, 0) # Green
+                    
+                    for page, insts in found_instances:
+                        for inst in insts:
+                            highlight = page.add_highlight_annot(inst)
+                            highlight.set_colors(stroke=color)
+                            highlight.set_info(content=description, title=f"Audit Finding ({severity.upper()})")
+                            highlight.update()
+                else:
+                    logger.warning(f"Quote NOT found in PDF: '{quote[:50]}...' (Cleaned: '{clean_quote[:50]}...')")
+            
+            # Save output
+            base, ext = os.path.splitext(original_path)
+            output_path = f"{base}_annotated{ext}"
+            doc.save(output_path)
+            doc.close()
+            
+            logger.info(f"Saved annotated PDF: {output_path} ({annotated_count} findings highlighted)")
+            return output_path
+            
+        except Exception as e:
+            logger.error(f"Error annotating PDF: {e}", exc_info=True)
             raise
 
     def _highlight_text(self, doc, quote: str, finding: Dict[str, Any]) -> bool:

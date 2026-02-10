@@ -1,0 +1,6 @@
+
+1. Database must be a relational database (PostgreSQL or MySQL).
+2. Authentication must use secure protocols (HTTPS) and strong encryption (OAuth2/JWT). Basic Auth is forbidden.
+3. Logs must be aggregated to a centralized system (ELK, Splunk, CloudWatch). Local logging is not permitted.
+4. API must follow RESTful design principles.
+5. Database backups must be performed at least daily and stored offsite.

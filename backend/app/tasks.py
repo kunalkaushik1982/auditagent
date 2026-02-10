@@ -156,13 +156,12 @@ def process_audit_task(self, session_id: str):
         # Store results
         # Generate annotation if applicable (Word documents)
         annotated_path = None
-        if audit_session.artifact_path.endswith('.docx'):
+        findings_list = result.get("findings", []) # Convert finding objects to dicts for annotator
+        
+        if audit_session.artifact_path.lower().endswith('.docx'):
             try:
                 from backend.app.core.annotator import Annotator
                 logger.info(f"🖊️ Generating inline annotations for {audit_session.artifact_path}")
-                
-                # Convert finding objects to dicts for annotator
-                findings_list = result.get("findings", [])
                 
                 annotator = Annotator()
                 annotated_path = annotator.annotate_document(
@@ -170,7 +169,20 @@ def process_audit_task(self, session_id: str):
                     findings=findings_list
                 )
             except Exception as e:
-                logger.error(f"Failed to generate annotations: {e}")
+                logger.error(f"Failed to generate Word annotations: {e}")
+                # Don't fail the whole audit if annotation fails
+        elif audit_session.artifact_path.lower().endswith('.pdf'):
+            try:
+                from backend.app.core.annotator import Annotator
+                logger.info(f"🖊️ Generating inline annotations for {audit_session.artifact_path}")
+                
+                annotator = Annotator()
+                annotated_path = annotator.annotate_pdf(
+                    original_path=audit_session.artifact_path,
+                    findings=findings_list
+                )
+            except Exception as e:
+                logger.error(f"Failed to generate PDF annotations: {e}")
                 # Don't fail the whole audit if annotation fails
         
         result_id = str(uuid.uuid4())

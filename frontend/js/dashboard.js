@@ -323,7 +323,7 @@ async function loadResults(sessionId) {
                     <p class="text-muted mb-0"><strong>Audit #${data.audit_number}</strong> <span style="font-size: 0.8em; opacity: 0.7">(Session: <code>${sessionId}</code>)</span></p>
                     ${data.annotated_artifact_path ? 
                         `<a href="http://localhost:8000/api/audits/results/${sessionId}/download-annotated" target="_blank" class="btn btn-primary" style="text-decoration: none;">
-                            📥 Download Annotated Word Doc
+                            📥 Download Annotated Report
                         </a>` : ''
                     }
                 </div>
