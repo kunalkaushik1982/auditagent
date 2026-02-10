@@ -10,6 +10,12 @@ document.getElementById('username').textContent = getUsername();
 const initials = getUsername().substring(0, 2).toUpperCase();
 document.getElementById('userAvatar').textContent = initials;
 
+// Chat Variables
+let currentChatSessionId = null;
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const sendChatBtn = document.getElementById('sendChatBtn');
+
 // Tab switching
 const tabs = document.querySelectorAll('.tab');
 const tabContents = document.querySelectorAll('.tab-content');
@@ -210,7 +216,8 @@ function buildAuditsTable(audits) {
                         <td class="duration-cell">${audit.duration_seconds ? formatDuration(audit.duration_seconds) : '-'}</td>
                         <td class="action-cell">
                             ${audit.status === 'completed' ? 
-                                `<button class="btn btn-secondary" onclick="loadResults('${audit.session_id}')">View Results</button>` :
+                                `<button class="btn btn-secondary btn-sm" onclick="loadResults('${audit.session_id}')">View Results</button>
+                                 <button class="btn btn-secondary btn-sm" style="margin-left: 5px;" onclick="loadChat('${audit.session_id}', ${audit.audit_number})">💬 Chat</button>` :
                                 `<span class="text-muted">Pending</span>`
                             }
                         </td>
@@ -264,7 +271,8 @@ function updateAuditRows(audits) {
         // Update action cell
         const actionCell = row.querySelector('.action-cell');
         const newAction = audit.status === 'completed' ? 
-            `<button class="btn btn-secondary" onclick="loadResults('${audit.session_id}')">View Results</button>` :
+            `<button class="btn btn-secondary btn-sm" onclick="loadResults('${audit.session_id}')">View Results</button>
+             <button class="btn btn-secondary btn-sm" style="margin-left: 5px;" onclick="loadChat('${audit.session_id}', ${audit.audit_number})">💬 Chat</button>` :
             `<span class="text-muted">Pending</span>`;
         if (actionCell && actionCell.innerHTML !== newAction) {
             actionCell.innerHTML = newAction;
@@ -386,6 +394,138 @@ async function loadResults(sessionId) {
         console.error('Error loading results:', error);
         resultsContent.innerHTML = '<p class="text-muted">Network error loading results.</p>';
     }
+}
+
+// --- Chat Functions ---
+
+function loadChat(sessionId, auditNumber) {
+    currentChatSessionId = sessionId;
+    
+    // Switch to Chat tab
+    document.querySelector('.tab[data-tab="chat"]').click();
+    
+    // Update Header
+    document.getElementById('chatcontext').innerHTML = `Chatting about <strong>Audit #${auditNumber}</strong> (Session: <code>${sessionId.substring(0,8)}...</code>)`;
+    
+    // Clear messages
+    chatMessages.innerHTML = `
+        <div class="message system">
+            <p>👋 Hello! I'm your Fix-It Agent.</p>
+            <p>I have read the document for Audit #${auditNumber}. Ask me anything!</p>
+            <p class="text-muted" style="font-size: 0.8em;">Example: "How do I fix the high severity findings?"</p>
+        </div>
+    `;
+}
+
+if (sendChatBtn) {
+    sendChatBtn.addEventListener('click', sendMessage);
+}
+if (chatInput) {
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+}
+
+async function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text || !currentChatSessionId) return;
+    
+    // Clear input
+    chatInput.value = '';
+    
+    // Add User Message
+    appendMessage(text, 'user');
+    
+    // Show typing indicator
+    const typingId = appendMessage('Thinking...', 'system', true);
+    
+    try {
+        const response = await authFetch(`http://localhost:8000/api/audits/chat/${currentChatSessionId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ question: text })
+        });
+        
+        const data = await response.json();
+        
+        // Remove typing indicator
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.parentNode.remove();
+        
+        if (!response.ok) {
+            appendMessage(`Error: ${data.detail || 'Failed to get response'}`, 'system');
+            return;
+        }
+        
+        // Add AI Message
+        appendMessage(data.answer, 'ai', false, data.sources);
+        
+    } catch (error) {
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.parentNode.remove();
+        console.error('Chat error:', error);
+        appendMessage('Network error. Please make sure the server supports RAG.', 'system');
+    }
+}
+
+function appendMessage(text, type, isTyping = false, sources = []) {
+    const msgDiv = document.createElement('div');
+    const id = 'msg-' + Date.now();
+    msgDiv.id = id;
+    
+    // Styling based on type
+    let styles = 'padding: 10px 15px; border-radius: 10px; margin-bottom: 10px; max-width: 80%;';
+    let align = 'flex-start';
+    
+    if (type === 'user') {
+        styles += 'background: var(--primary); color: white; align-self: flex-end;';
+        align = 'flex-end';
+    } else if (type === 'ai') {
+        styles += 'background: var(--surface); border: 1px solid var(--border); align-self: flex-start;';
+        align = 'flex-start';
+    } else {
+        styles += 'background: transparent; color: var(--text-muted); align-self: center; text-align: center; font-style: italic;';
+        align = 'center';
+    }
+    
+    msgDiv.style.cssText = styles;
+    
+    // Content
+    // Simple markdown parsing
+    let contentHtml = text;
+    if (type === 'ai') {
+        // Convert bold
+        contentHtml = contentHtml.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Convert list items
+        contentHtml = contentHtml.replace(/^\* (.*$)/gm, '<li>$1</li>');
+        contentHtml = contentHtml.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+        // Convert newlines
+        contentHtml = contentHtml.replace(/\n/g, '<br>');
+    } else {
+        contentHtml = text.replace(/\n/g, '<br>');
+    }
+    
+    // Add sources if available
+    if (sources && sources.length > 0) {
+        const sourcesHtml = sources.map(s => `<span style="display:inline-block; background:rgba(0,0,0,0.1); padding:2px 6px; border-radius:4px; font-size:0.75em; margin-right:4px;">📄 ${s}</span>`).join('');
+        contentHtml += `<div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(0,0,0,0.1); display:flex; flex-wrap:wrap; gap:4px;">${sourcesHtml}</div>`;
+    }
+    
+    msgDiv.innerHTML = contentHtml;
+    
+    // Wrapper for alignment
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.alignItems = align;
+    wrapper.appendChild(msgDiv);
+    
+    chatMessages.appendChild(wrapper);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    return id;
 }
 
 // Helper Functions

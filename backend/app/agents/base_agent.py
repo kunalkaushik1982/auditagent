@@ -7,15 +7,15 @@ Defines the abstract base class that all specific agents inherit from.
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 try:
-    from langchain_community.chat_models import ChatOllama
+    from langchain_ollama import ChatOllama
 except ImportError:
     pass
-from langchain.prompts import ChatPromptTemplate
-from langchain.output_parsers import PydanticOutputParser
-from langchain_core.pydantic_v1 import BaseModel, Field
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
 from backend.app.core.config import settings
 import docx2txt
 import PyPDF2

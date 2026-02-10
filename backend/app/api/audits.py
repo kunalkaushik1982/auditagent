@@ -20,6 +20,7 @@ from backend.app.models.audit_session import AuditSession
 from backend.app.models.audit_result import AuditResult
 from backend.app.models.audit_finding import AuditFinding as DBFinding
 from backend.app.api.dependencies import get_current_user
+from pydantic import BaseModel
 from backend.app.api.schemas import AuditStatusResponse, AuditResultResponse, FindingResponse
 from backend.app.agents.agent_factory import AgentFactory
 from backend.app.core.config import settings
@@ -261,3 +262,61 @@ async def download_annotated_report(
         filename=filename,
         media_type=media_type
     )
+
+
+class ChatRequest(BaseModel):
+    question: str
+
+
+@router.post("/chat/{session_id}")
+async def chat_with_audit(
+    session_id: str,
+    chat_request: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Chat with the audit document using RAG.
+    """
+    # Verify session access
+    audit_session = db.query(AuditSession).filter(
+        AuditSession.session_id == session_id,
+        AuditSession.user_id == current_user.id
+    ).first()
+    
+    if not audit_session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Audit session not found"
+        )
+        
+    try:
+        from backend.app.core.rag_service import RAGService
+        rag_service = RAGService()
+        
+        # Check if embeddings initialized
+        if not rag_service.embeddings:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="RAG service unavailable (Embeddings not configured)"
+            )
+            
+        # Pass artifact_path to enable lazy indexing if needed
+        response = rag_service.query_audit(
+            session_id, 
+            chat_request.question, 
+            file_path=audit_session.artifact_path
+        )
+        return response
+        
+    except ImportError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="RAG dependencies not installed"
+        )
+    except Exception as e:
+        logger.error(f"Chat error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing chat: {str(e)}"
+        )

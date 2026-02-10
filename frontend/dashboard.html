@@ -199,6 +199,7 @@
             <button class="tab active" data-tab="submit">Submit Audit</button>
             <button class="tab" data-tab="audits">My Audits</button>
             <button class="tab" data-tab="results">View Results</button>
+            <button class="tab" data-tab="chat">💬 Fix It</button>
         </div>
 
         <!-- Submit Audit Tab -->
@@ -257,6 +258,28 @@
                 <h2>Audit Results</h2>
                 <div id="resultsContent">
                     <p class="text-muted">Select an audit from "My Audits" to view results</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Tab -->
+        <div id="chat-tab" class="tab-content">
+            <div class="card" style="height: 80vh; display: flex; flex-direction: column;">
+                <div class="chat-header" style="padding-bottom: var(--space-md); border-bottom: 1px solid var(--border); margin-bottom: var(--space-md);">
+                    <h2>💬 Fix-It Agent</h2>
+                    <p class="text-muted" id="chatcontext">Select an audit to start chatting.</p>
+                </div>
+                
+                <div id="chatMessages" style="flex: 1; overflow-y: auto; padding: var(--space-md); background: var(--surface-alt); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
+                    <!-- Messages will appear here -->
+                    <div class="message system">
+                        Please select an audit from "My Audits" first.
+                    </div>
+                </div>
+
+                <div class="chat-input-area" style="display: flex; gap: var(--space-md);">
+                    <input type="text" id="chatInput" class="form-control" placeholder="Ask a question about the audit..." style="flex: 1; padding: var(--space-md);">
+                    <button id="sendChatBtn" class="btn btn-primary">Send</button>
                 </div>
             </div>
         </div>

@@ -186,6 +186,19 @@ def process_audit_task(self, session_id: str):
                 # Don't fail the whole audit if annotation fails
         
         result_id = str(uuid.uuid4())
+        
+        # Index document for RAG
+        try:
+            from backend.app.core.rag_service import RAGService
+            logger.info(f"🧠 Indexing document for RAG: {audit_session.artifact_path}")
+            rag_service = RAGService()
+            rag_service.index_document(session_id, audit_session.artifact_path)
+            logger.info("RAG Indexing complete")
+        except ImportError:
+            logger.warning("RAG dependencies not installed (langchain-chroma). Skipping indexing.")
+        except Exception as e:
+            logger.error(f"Failed to index document for RAG: {e}")
+
         audit_result = AuditResult(
             result_id=result_id,
             session_id=audit_session.id,

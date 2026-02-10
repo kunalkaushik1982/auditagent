@@ -5,6 +5,7 @@ File: backend/app/core/config.py
 Centralizes application configuration from environment variables.
 """
 
+import os
 from pydantic_settings import BaseSettings
 from typing import List
 
@@ -12,6 +13,10 @@ from typing import List
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
     
+    # Paths
+    # backend/app/core/config.py -> backend/
+    BASE_DIR: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+
     # Application
     APP_NAME: str = "Delivery Audit Agent"
     VERSION: str = "1.0.0"
@@ -45,6 +50,7 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "openai"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3"
+    OLLAMA_EMBEDDING_MODEL: str = "nomic-embed-text"
     
     # CORS
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000,null"
