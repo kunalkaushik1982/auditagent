@@ -26,6 +26,7 @@ venvagent/
 env/
 ENV/
 .venv
+.venv-clean/
 
 # Environment Variables
 .env
