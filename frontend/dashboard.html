@@ -175,6 +175,113 @@
             font-weight: 700;
             margin: 0 auto var(--space-md);
         }
+        
+        /* Notifications */
+        .notification-container {
+            position: relative;
+            margin-right: var(--space-md);
+        }
+        
+        .notification-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            position: relative;
+            padding: var(--space-xs);
+            color: var(--text-secondary);
+        }
+        
+        .notification-btn:hover {
+            color: var(--text-primary);
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--danger);
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .notification-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 350px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            display: none;
+            z-index: 1000;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .notification-dropdown.show {
+            display: block;
+        }
+        
+        .notification-header {
+            padding: var(--space-md);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+        
+        .mark-read-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        
+        .notification-item {
+            padding: var(--space-md);
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .notification-item:hover {
+            background: var(--surface-alt);
+        }
+        
+        .notification-item.unread {
+            background: rgba(var(--primary-rgb), 0.05);
+            border-left: 3px solid var(--primary);
+        }
+        
+        .notif-title {
+            font-weight: 600;
+            margin-bottom: var(--space-xs);
+        }
+        
+        .notif-message {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-xs);
+        }
+        
+        .notif-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .empty-notifications {
+            padding: var(--space-lg);
+            text-align: center;
+            color: var(--text-muted);
+        }
     </style>
 </head>
 <body>
@@ -186,6 +293,23 @@
                 <p class="text-muted">AI-Powered Document Analysis</p>
             </div>
             <div class="user-info">
+                <!-- Notifications -->
+                <div class="notification-container">
+                    <button class="notification-btn" id="notificationBtn" onclick="toggleNotifications()">
+                        🔔
+                        <span class="notification-badge" id="notificationBadge">0</span>
+                    </button>
+                    <div class="notification-dropdown" id="notificationDropdown">
+                        <div class="notification-header">
+                            <span>Notifications</span>
+                            <button class="mark-read-btn" onclick="markAllNotificationsRead()">Mark all read</button>
+                        </div>
+                        <div id="notificationList">
+                            <div class="empty-notifications">No notifications</div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="user-avatar" id="userAvatar"></div>
                 <div>
                     <div id="username"></div>
@@ -236,7 +360,7 @@
                     </div>
 
                     <div class="mt-md">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" id="auditSubmitBtn">
                             🚀 Start Audit
                         </button>
                     </div>

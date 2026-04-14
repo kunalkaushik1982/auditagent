@@ -23,6 +23,7 @@ from backend.app.core.database import SessionLocal
 from backend.app.models.audit_session import AuditSession
 from backend.app.models.audit_result import AuditResult
 from backend.app.models.audit_finding import AuditFinding as DBFinding
+from backend.app.models.notification import Notification
 from backend.app.agents.sow_reviewer import SoWReviewerAgent
 from backend.app.agents.project_plan_reviewer import ProjectPlanReviewerAgent
 from backend.app.agents.architecture_compliance import ArchitectureComplianceAgent
@@ -137,7 +138,10 @@ def process_audit_task(self, session_id: str):
             artifact_path=audit_session.artifact_path,
             checklist_path=audit_session.checklist_path
         ))
-        
+
+        if result.get("status") != "success":
+            raise RuntimeError(result.get("error", "Audit processing failed"))
+
         # Update to 70%
         audit_session.progress_percentage = 70.0
         db.commit()
@@ -234,6 +238,21 @@ def process_audit_task(self, session_id: str):
         
         logger.info(f"Audit {session_id} completed successfully")
         
+        # Create success notification
+        try:
+            notification = Notification(
+                notification_id=str(uuid.uuid4()),
+                user_id=audit_session.user_id,
+                notification_type="audit_completed",
+                title="Audit Completed",
+                message=f"Your audit for {os.path.basename(audit_session.artifact_path)} has completed successfully.",
+                related_session_id=audit_session.id
+            )
+            db.add(notification)
+            db.commit()
+        except Exception as e:
+            logger.error(f"Failed to create success notification: {e}")
+        
         return {
             "status": "completed",
             "session_id": session_id,
@@ -249,6 +268,21 @@ def process_audit_task(self, session_id: str):
             audit_session.error_message = str(e)
             audit_session.completed_at = datetime.utcnow()
             db.commit()
+            
+            # Create failure notification
+            try:
+                notification = Notification(
+                    notification_id=str(uuid.uuid4()),
+                    user_id=audit_session.user_id,
+                    notification_type="audit_failed",
+                    title="Audit Failed",
+                    message=f"Audit for {os.path.basename(audit_session.artifact_path)} failed: {str(e)[:100]}",
+                    related_session_id=audit_session.id
+                )
+                db.add(notification)
+                db.commit()
+            except Exception as notif_e:
+                logger.error(f"Failed to create failure notification: {notif_e}")
         
         # Re-raise exception for Celery to handle
         raise

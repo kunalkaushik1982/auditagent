@@ -45,9 +45,14 @@ class Settings(BaseSettings):
     
     # OpenAI
     OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
     
     # LLM Provider (openai or ollama)
     LLM_PROVIDER: str = "openai"
+    LLM_MODEL: str = ""
+    EMBEDDING_PROVIDER: str = ""
+    EMBEDDING_MODEL: str = ""
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3"
     OLLAMA_EMBEDDING_MODEL: str = "nomic-embed-text"

@@ -67,8 +67,13 @@ checklistFile.addEventListener('change', (e) => {
 
 // Submit Audit Form
 const auditForm = document.getElementById('auditForm');
+const auditSubmitBtn = document.getElementById('auditSubmitBtn');
+let auditSubmissionInFlight = false;
+
 auditForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    if (auditSubmissionInFlight) return;
     
     const agentType = document.getElementById('agentType').value;
     const artifact = artifactFile.files[0];
@@ -80,6 +85,12 @@ auditForm.addEventListener('submit', async (e) => {
     }
     
     try {
+        auditSubmissionInFlight = true;
+        if (auditSubmitBtn) {
+            auditSubmitBtn.disabled = true;
+            auditSubmitBtn.textContent = 'Submitting...';
+        }
+
         const formData = new FormData();
         formData.append('agent_type', agentType);
         formData.append('artifact_file', artifact);
@@ -116,6 +127,12 @@ auditForm.addEventListener('submit', async (e) => {
     } catch (error) {
         console.error('Audit submission error:', error);
         showToast('Network error. Please ensure the server is running.', 'error');
+    } finally {
+        auditSubmissionInFlight = false;
+        if (auditSubmitBtn) {
+            auditSubmitBtn.disabled = false;
+            auditSubmitBtn.textContent = 'Start Audit';
+        }
     }
 });
 
@@ -622,3 +639,114 @@ function hideLoading() {
         overlay.remove();
     }
 }
+
+// --- Notifications ---
+const notificationBtn = document.getElementById('notificationBtn');
+const notificationBadge = document.getElementById('notificationBadge');
+const notificationDropdown = document.getElementById('notificationDropdown');
+const notificationList = document.getElementById('notificationList');
+
+let notificationPollingInterval = null;
+
+// Toggle Dropdown
+function toggleNotifications() {
+    notificationDropdown.classList.toggle('show');
+    if (notificationDropdown.classList.contains('show')) {
+        loadNotifications();
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    if (notificationBtn && !notificationBtn.contains(e.target) && notificationDropdown && !notificationDropdown.contains(e.target)) {
+        notificationDropdown.classList.remove('show');
+    }
+});
+
+async function loadNotifications() {
+    try {
+        const response = await authFetch('http://localhost:8000/api/notifications/');
+        if (!response.ok) return;
+        
+        const notifications = await response.json();
+        
+        updateNotificationBadge(notifications);
+        renderNotifications(notifications);
+    } catch (error) {
+        console.error('Error loading notifications:', error);
+    }
+}
+
+function updateNotificationBadge(notifications) {
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+    if (notificationBadge) {
+        notificationBadge.textContent = unreadCount;
+        notificationBadge.style.display = unreadCount > 0 ? 'inline-block' : 'none';
+    }
+}
+
+function renderNotifications(notifications) {
+    if (!notificationList) return;
+    
+    if (notifications.length === 0) {
+        notificationList.innerHTML = '<div class="empty-notifications">No notifications</div>';
+        return;
+    }
+    
+    notificationList.innerHTML = notifications.map(n => `
+        <div class="notification-item ${n.is_read ? '' : 'unread'}" onclick="handleNotificationClick('${n.notification_id}', ${n.related_session_id}, ${n.is_read})">
+            <div class="notif-title">${n.title}</div>
+            <div class="notif-message">${n.message}</div>
+            <div class="notif-time">${formatISTDateTime(n.created_at)}</div>
+        </div>
+    `).join('');
+}
+
+async function handleNotificationClick(notificationId, relatedSessionId, isRead) {
+    // Mark as read if not already
+    if (!isRead) {
+        try {
+            await authFetch(`http://localhost:8000/api/notifications/${notificationId}/read`, {
+                method: 'PUT'
+            });
+        } catch (error) {
+            console.error('Error marking notification read:', error);
+        }
+    }
+        
+    // Hide dropdown
+    if (notificationDropdown) notificationDropdown.classList.remove('show');
+    
+    // Refresh notifications (to update badge)
+    loadNotifications();
+    
+    // Navigate to result if applicable
+    if (relatedSessionId) {
+        // Here we assume related_session_id is the ID of the audit session
+        // We'll try to find the row in the table and click "View Results"
+        // But the row might not be loaded if we are on a different tab
+        
+        // Better: Just load results directly
+        loadResults(relatedSessionId);
+    }
+}
+
+async function markAllNotificationsRead() {
+    try {
+        await authFetch('http://localhost:8000/api/notifications/mark-all-read', {
+            method: 'POST'
+        });
+        loadNotifications();
+    } catch (error) {
+        console.error('Error marking all read:', error);
+    }
+}
+
+// Start polling for notifications
+function startNotificationPolling() {
+    loadNotifications(); // Initial load
+    notificationPollingInterval = setInterval(loadNotifications, 10000); // Poll every 10s
+}
+
+// Start immediately
+startNotificationPolling();
