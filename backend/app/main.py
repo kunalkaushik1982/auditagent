@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from backend.app.core.config import settings
-from backend.app.api import auth, audits
+from backend.app.api import auth, audits, notifications
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -31,9 +31,9 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(audits.router, prefix="/api/audits", tags=["Audits"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 # TODO: Include other routers
 # app.include_router(agents.router, prefix="/api/agents", tags=["Agents"])
-# app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 
 @app.get("/")
 async def root():
